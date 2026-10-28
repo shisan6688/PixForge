@@ -1,6 +1,6 @@
 # 示例素材来源
 
-本目录保存已确认的 7 张图片，用于素材制作网站的模板展示和演示。素材文件随源码交付，页面运行时不依赖第三方图片链接。记录日期：2026-10-28。
+本目录保存已确认的 8 张图片，用于素材制作网站的模板展示和演示。素材文件随源码交付，页面运行时不依赖第三方图片链接。记录日期：2026-10-28。
 
 ## Unsplash 原图
 
@@ -15,6 +15,14 @@
 | 暖光胶片相机 | [`templates/mustafi-numann-kz3pzTVrHtU-unsplash.jpg`](./templates/mustafi-numann-kz3pzTVrHtU-unsplash.jpg) | Mustafi Numann | [Vintage camera illuminated by warm light](https://unsplash.com/photos/vintage-camera-illuminated-by-warm-light-kz3pzTVrHtU) |
 
 “暖色轮廓”是对话中选图时使用的名称；实际下载原图也偏青绿色。后续如需暖色封面，应基于原图另做调色版本并保留来源记录。
+
+## Pexels 原图
+
+以下图片由用户从 Pexels 原图页下载，项目中保留原始文件名和图像内容。原图页标注为可按 [Pexels License](https://www.pexels.com/license/) 免费使用；本项目记录摄影作者与来源。
+
+| 对话中的名称 | 项目文件 | 摄影作者 | 原图页面 |
+| --- | --- | --- | --- |
+| 暗调城市街头人像 | [`templates/pexels-bollieball-5189976.jpg`](./templates/pexels-bollieball-5189976.jpg) | Chun-ja Bustamante | [A Woman in a White Long Sleeved Shirt Holding a Tote Bag](https://www.pexels.com/photo/a-woman-in-a-white-long-sleeved-shirt-holding-a-tote-bag-5189976/) |
 
 ## AI 生成的演示图
 
