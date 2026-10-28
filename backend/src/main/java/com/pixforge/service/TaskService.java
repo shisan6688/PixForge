@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -14,15 +15,23 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+/** 校验任务输入，创建任务并提供用户隔离的历史查询。 */
 @Service
 public class TaskService {
+    /** 可选的演示失败阶段与每阶段延迟设置。 */
     public record Simulation(String failAtStage, Integer stepDelayMs) {}
+    /** 制作任务提交请求。 */
     public record CreateRequest(String templateId, List<String> assetIds, Simulation simulation) {}
+    /** 任务阶段的对外状态。 */
     public record StepView(String stage, String status, String failureCode, String failureMessage) {}
+    /** 任务详情与列表项的对外视图。 */
     public record TaskView(String id, String templateId, String templateTitle, String templateCoverUrl,
                            String status, String currentStage, List<StepView> steps, String createdAt,
                            String resultUrl, String failureCode, String failureMessage) {}
-    public record TaskPage(List<TaskView> items, long total, int page, int size) {}
+    /** 当前用户全部、进行中、成功及失败的任务数量。 */
+    public record TaskCounts(long all, long active, long succeeded, long failed) {}
+    /** 包含状态统计的分页任务响应。 */
+    public record TaskPage(List<TaskView> items, long total, int page, int size, TaskCounts counts) {}
 
     private final TemplateMapper templates;
     private final AssetMapper assets;
@@ -31,12 +40,14 @@ public class TaskService {
     private final TaskProcessor processor;
     private final boolean demoControlsEnabled;
 
+    /** 注入任务创建和查询所需的模板、素材、存储及执行组件。 */
     public TaskService(TemplateMapper templates, AssetMapper assets, TaskMapper tasks, StorageService storage,
                        TaskProcessor processor, @Value("${pixforge.demo-controls-enabled}") boolean demoControlsEnabled) {
         this.templates = templates; this.assets = assets; this.tasks = tasks;
         this.storage = storage; this.processor = processor; this.demoControlsEnabled = demoControlsEnabled;
     }
 
+    /** 校验模板和素材，在事务中创建任务并于提交后启动执行。 */
     @Transactional
     public TaskView create(CreateRequest request, long userId) {
         if (request == null || request.templateId() == null || request.templateId().isBlank())
@@ -75,22 +86,34 @@ public class TaskService {
             row.createdAt.atOffset(ZoneOffset.UTC).toString(), null, null, null);
     }
 
+    /** 读取当前用户可访问的任务详情。 */
     public TaskView get(String id, long userId) {
         TaskRow row = tasks.owned(id, userId);
         if (row == null) throw new ResourceUnavailableException("任务不可用");
         return view(row);
     }
 
-    public TaskPage list(long userId, int page, int size, boolean active) {
+    /** 按状态分页查询任务并返回每种状态的全量计数。 */
+    public TaskPage list(long userId, int page, int size, String status) {
         if (page < 0 || size < 1 || size > 100) throw new IllegalArgumentException("分页参数无效");
+        if (status != null && !Set.of("ACTIVE", "SUCCEEDED", "FAILED").contains(status))
+            throw new IllegalArgumentException("不支持的状态筛选");
         int offset;
         try { offset = Math.multiplyExact(page, size); }
         catch (ArithmeticException exception) { throw new IllegalArgumentException("分页参数过大"); }
-        int flag = active ? 1 : 0;
-        return new TaskPage(tasks.list(userId, flag, size, offset).stream().map(this::view).toList(),
-            tasks.count(userId, flag), page, size);
+        TaskCounts counts = new TaskCounts(tasks.count(userId, null), tasks.count(userId, "ACTIVE"),
+            tasks.count(userId, "SUCCEEDED"), tasks.count(userId, "FAILED"));
+        long total = switch (status == null ? "ALL" : status) {
+            case "ACTIVE" -> counts.active();
+            case "SUCCEEDED" -> counts.succeeded();
+            case "FAILED" -> counts.failed();
+            default -> counts.all();
+        };
+        return new TaskPage(tasks.list(userId, status, size, offset).stream().map(this::view).toList(),
+            total, page, size, counts);
     }
 
+    /** 将任务和阶段记录转换为对外响应。 */
     private TaskView view(TaskRow row) {
         return new TaskView(row.id, row.templateId, row.templateTitle, row.templateCoverUrl,
             row.status, row.currentStage,

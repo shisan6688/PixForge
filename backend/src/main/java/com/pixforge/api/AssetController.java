@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+/** 处理用户素材上传与私有图片读取。 */
 @RestController
 @RequestMapping("/api/assets")
 public class AssetController {
@@ -22,10 +23,12 @@ public class AssetController {
     private final StorageService storage;
     private final CurrentUser currentUser;
 
+    /** 注入素材持久化、文件存储与当前用户解析器。 */
     public AssetController(AssetMapper mapper, StorageService storage, CurrentUser currentUser) {
         this.mapper = mapper; this.storage = storage; this.currentUser = currentUser;
     }
 
+    /** 验证并保存当前用户上传的图片。 */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Map<String, Object> upload(@RequestParam("file") MultipartFile file, HttpSession session) throws IOException {
         AssetRow asset = new AssetRow();
@@ -39,6 +42,7 @@ public class AssetController {
             "originalFilename", asset.originalFilename, "mimeType", asset.mimeType, "sizeBytes", asset.sizeBytes);
     }
 
+    /** 仅向素材所有者返回图片内容。 */
     @GetMapping("/{id}/content")
     public ResponseEntity<Resource> content(@PathVariable String id, HttpSession session) {
         AssetRow asset = mapper.owned(id, currentUser.id(session));

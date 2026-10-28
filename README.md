@@ -7,7 +7,7 @@
 - 8 个数据库种子模板，支持分类筛选、详情和不同素材数量要求；旅行明信片可上传 1–3 张图片。
 - 后端校验并保存 JPEG/PNG 图片；按演示用户隔离素材、任务和结果访问。
 - Java 事务中创建任务与三个阶段，提交返回 HTTP 202；固定大小线程池后台按“素材检查 → 模拟生成 → 结果整理”执行，可指定阶段失败和耗时。
-- 任务与阶段写入 MySQL，支持分页历史、未完成任务和单任务查询；队列满和服务重启遗留任务会记录失败原因。
+- 任务与阶段写入 MySQL，支持分页历史、进行中/已完成/制作失败独立查询及单任务查询；队列满和服务重启遗留任务会记录失败原因。
 - 前端默认使用真实 Java API，提供上传反馈、多任务追踪、请求错误保留旧数据、刷新恢复和演示用户切换。设置 `NEXT_PUBLIC_USE_DEMO_API=true` 可使用仅存于浏览器的独立演示适配器。
 
 ## 技术版本与结构
@@ -56,7 +56,7 @@ npm run dev
 
 1. 在首页筛选模板，进入详情并上传要求数量的 JPEG/PNG 图片（每张不超过 5 MB）。
 2. 展开“演示设置”，将每阶段耗时设为 1、2、4 或 8 秒；失败阶段可选素材检查、模拟生成或结果整理。提交后立即进入“我的制作”。
-3. 制作期间继续提交其他任务，观察排队和各阶段状态。刷新历史页后记录从 MySQL 恢复，未完成任务继续轮询。
+3. 制作期间继续提交其他任务，观察排队和各阶段状态。刷新历史页后记录从 MySQL 恢复，未完成任务继续轮询。“我的制作”可分别查看全部作品、制作中、已完成和制作失败；各标签数量由服务端统计。
 4. 右上角切换演示用户 A/B，验证各自只能查看自己的任务和图片。
 
 `DEMO_CONTROLS_ENABLED=false` 时，Java 拒绝带有 `simulation` 对象的提交请求；此配置适用于不开放演示控制的环境。当前前端始终会提交该对象，关闭演示控制时需同步调整前端请求。
@@ -70,8 +70,10 @@ npm run dev
 | POST | `/api/assets` | `multipart/form-data` 字段 `file`；返回 `id`、`previewUrl`、文件信息 |
 | GET | `/api/assets/{id}/content` | 预览本人图片 |
 | POST | `/api/tasks` | 返回 HTTP 202 和任务快照；请求示例见下方 |
-| GET | `/api/tasks?page=0&size=20` | 个人历史，返回 `items`、`total`、`page`、`size` |
+| GET | `/api/tasks?page=0&size=20` | 个人历史，返回 `items`、当前筛选的 `total`、`page`、`size` 和各状态 `counts` |
 | GET | `/api/tasks?status=ACTIVE` | 只查询 `QUEUED` / `RUNNING` |
+| GET | `/api/tasks?status=SUCCEEDED` | 只查询已完成任务 |
+| GET | `/api/tasks?status=FAILED` | 只查询制作失败任务 |
 | GET | `/api/tasks/{id}`、`/api/tasks/{id}/result` | 任务详情或本人成功图片 |
 
 ```json
@@ -82,7 +84,7 @@ npm run dev
 }
 ```
 
-整体状态为 `QUEUED → RUNNING → SUCCEEDED / FAILED`，阶段为 `CHECK_ASSETS → GENERATE → FINALIZE`。每阶段保存独立的 `PENDING / RUNNING / SUCCEEDED / FAILED` 状态、时间和失败原因。终态不会因查询回退。任务查询返回 `id`、`templateId`、`templateTitle`、`templateCoverUrl`、`status`、`currentStage`、`steps`、带 UTC 偏移的 `createdAt`、`resultUrl`、`failureCode`、`failureMessage`。错误响应包含 `code` 和 `message`，字段校验错误还包含 `fields`。
+未提供 `status` 时查询全部任务；`counts` 包含当前用户的 `all`、`active`、`succeeded` 和 `failed`，不受当前页大小限制。整体状态为 `QUEUED → RUNNING → SUCCEEDED / FAILED`，阶段为 `CHECK_ASSETS → GENERATE → FINALIZE`。每阶段保存独立的 `PENDING / RUNNING / SUCCEEDED / FAILED` 状态、时间和失败原因。终态不会因查询回退。任务查询返回 `id`、`templateId`、`templateTitle`、`templateCoverUrl`、`status`、`currentStage`、`steps`、带 UTC 偏移的 `createdAt`、`resultUrl`、`failureCode`、`failureMessage`。错误响应包含 `code` 和 `message`，字段校验错误还包含 `fields`。
 
 Java 会话决定当前演示用户；新会话默认为 A，POST 会话接口可切至 B。不存在或不属于当前用户的私人资源统一返回 404。前端对轮询请求失败保留最近任务数据；只有服务端任务状态为 `FAILED` 才显示制作失败。
 

@@ -14,6 +14,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.stereotype.Service;
 import jakarta.annotation.PreDestroy;
 
+/** 通过有界线程池依次执行制作任务的三个阶段。 */
 @Service
 public class TaskProcessor {
     public static final List<String> STAGES = List.of("CHECK_ASSETS", "GENERATE", "FINALIZE");
@@ -22,6 +23,7 @@ public class TaskProcessor {
     private final StorageService storage;
     private final ThreadPoolExecutor executor;
 
+    /** 创建有界执行线程池并注入阶段状态服务。 */
     public TaskProcessor(TaskMapper mapper, TaskStateService state, StorageService storage,
                          @Value("${pixforge.worker-count}") int workers,
                          @Value("${pixforge.queue-capacity}") int capacity) {
@@ -31,9 +33,11 @@ public class TaskProcessor {
             new ArrayBlockingQueue<>(capacity), new ThreadPoolExecutor.AbortPolicy());
     }
 
+    /** 启动时清理上次遗留的未结束任务。 */
     @EventListener(ApplicationReadyEvent.class)
     public void onStartup() { state.interruptOldTasks(); }
 
+    /** 将已提交的任务放入后台执行队列。 */
     public void submit(String id) {
         try { executor.execute(() -> process(id)); }
         catch (RejectedExecutionException exception) {
@@ -41,6 +45,7 @@ public class TaskProcessor {
         }
     }
 
+    /** 执行素材检查、模拟生成和结果整理，并记录失败。 */
     public void process(String id) {
         TaskRow task = mapper.find(id);
         if (task == null) return;
@@ -76,13 +81,16 @@ public class TaskProcessor {
         }
     }
 
+    /** 将阶段代码转换为可读名称。 */
     private String stageName(String stage) {
         return switch (stage) { case "CHECK_ASSETS" -> "素材检查"; case "GENERATE" -> "模拟生成"; default -> "结果整理"; };
     }
 
+    /** 服务关闭时停止任务执行线程。 */
     @PreDestroy
     public void shutdown() { executor.shutdownNow(); }
 
+    /** 携带业务失败代码的阶段异常。 */
     private static class StageFailure extends Exception {
         final String code;
         StageFailure(String code, String message) { super(message); this.code = code; }

@@ -1,6 +1,6 @@
 import { templates } from "./demo-data";
 import { materializeDemoTask } from "./task-state";
-import { Asset, ProductionTask, Stage, STAGES, Template, User } from "./types";
+import { Asset, ProductionTask, Stage, STAGES, TaskPage, TaskQueryStatus, Template, User, isActive } from "./types";
 
 const demo = process.env.NEXT_PUBLIC_USE_DEMO_API === "true";
 const TASKS_KEY = "pixforge-demo-tasks";
@@ -83,10 +83,14 @@ export const api = {
     }
     return request("/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ templateId: template.id, assetIds, simulation }) });
   },
-  async listTasks(signal?: AbortSignal): Promise<ProductionTask[]> {
-    if (demo) return storedTasks().filter(task => (task as ProductionTask & { userId: string }).userId === currentDemoUser().id).map(task => materializeDemoTask(task, Date.now()));
-    const page = await request<{ items: ProductionTask[] }>("/tasks?page=0&size=100", { signal });
-    return page.items;
+  async listTasks(status?: TaskQueryStatus, signal?: AbortSignal): Promise<TaskPage> {
+    if (demo) {
+      const all = storedTasks().filter(task => (task as ProductionTask & { userId: string }).userId === currentDemoUser().id).map(task => materializeDemoTask(task, Date.now()));
+      const counts = { all: all.length, active: all.filter(isActive).length, succeeded: all.filter(task => task.status === "SUCCEEDED").length, failed: all.filter(task => task.status === "FAILED").length };
+      const items = all.filter(task => !status || (status === "ACTIVE" ? isActive(task) : task.status === status));
+      return { items, total: items.length, page: 0, size: 100, counts };
+    }
+    return request<TaskPage>(`/tasks?page=0&size=100${status ? `&status=${status}` : ""}`, { signal });
   },
   async getTask(id: string, signal?: AbortSignal): Promise<ProductionTask> {
     if (demo) {

@@ -6,15 +6,16 @@ import { ArrowRight, Check, ChevronRight, Clock3, CircleAlert, LoaderCircle, Ref
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { mergeTasks } from "@/lib/task-state";
-import { isActive, ProductionTask, STAGE_LABELS, STAGES } from "@/lib/types";
+import { isActive, matchesTaskFilter, ProductionTask, STAGE_LABELS, STAGES, TaskCounts, TaskFilter } from "@/lib/types";
 
 function TaskPageContent() {
   const search = useSearchParams();
   const created = search.get("created");
   const [tasks, setTasks] = useState<ProductionTask[]>([]);
+  const [counts, setCounts] = useState<TaskCounts>({ all: 0, active: 0, succeeded: 0, failed: 0 });
   const [loading, setLoading] = useState(true);
   const [queryError, setQueryError] = useState("");
-  const [filter, setFilter] = useState<"ALL" | "ACTIVE" | "DONE">("ALL");
+  const [filter, setFilter] = useState<TaskFilter>("ALL");
   const [revision, setRevision] = useState(0);
   const requests = useRef<AbortController | null>(null);
   const generation = useRef(0);
@@ -23,14 +24,18 @@ function TaskPageContent() {
     const controller = new AbortController(); requests.current = controller;
     const requestGeneration = generation.current;
     try {
-      const result = await api.listTasks(controller.signal);
-      if (!controller.signal.aborted && requestGeneration === generation.current) { setTasks(previous => initial ? result : mergeTasks(previous, result)); setQueryError(""); }
+      const result = await api.listTasks(filter === "ALL" ? undefined : filter, controller.signal);
+      if (!controller.signal.aborted && requestGeneration === generation.current) {
+        setTasks(previous => filter === "ALL" && !initial ? mergeTasks(previous, result.items) : result.items);
+        setCounts(result.counts);
+        setQueryError("");
+      }
     } catch (err) {
       if (!controller.signal.aborted && requestGeneration === generation.current) setQueryError(err instanceof Error ? err.message : "查询失败，请重试。");
     } finally { if (!controller.signal.aborted && requestGeneration === generation.current) setLoading(false); }
-  }, []);
+  }, [filter]);
   useEffect(() => {
-    const reset = () => { generation.current += 1; requests.current?.abort(); setTasks([]); setLoading(true); setQueryError(""); setRevision(value => value + 1); };
+    const reset = () => { generation.current += 1; requests.current?.abort(); setTasks([]); setCounts({ all: 0, active: 0, succeeded: 0, failed: 0 }); setLoading(true); setQueryError(""); setRevision(value => value + 1); };
     window.addEventListener("pixforge:user-changed", reset);
     return () => { generation.current += 1; requests.current?.abort(); window.removeEventListener("pixforge:user-changed", reset); };
   }, []);
@@ -39,18 +44,19 @@ function TaskPageContent() {
     queueMicrotask(() => { if (active) void refresh(true); });
     return () => { active = false; requests.current?.abort(); };
   }, [refresh, revision]);
-  const activeCount = tasks.filter(isActive).length;
+  const activeCount = counts.active;
   useEffect(() => {
     if (activeCount === 0) return;
     const timer = window.setInterval(() => { void refresh(); }, 1500);
     return () => window.clearInterval(timer);
   }, [activeCount, refresh]);
-  const visible = tasks.filter(task => filter === "ALL" || (filter === "ACTIVE" ? isActive(task) : !isActive(task)));
+  const visible = tasks.filter(task => matchesTaskFilter(task, filter));
+  const changeFilter = (next: TaskFilter) => { if (filter !== next) { setFilter(next); setLoading(true); } };
   return <div className="page-container tasks-page"><div className="breadcrumb"><Link href="/">创作工作台</Link><ChevronRight size={14}/> 我的制作</div><div className="tasks-heading"><div><span className="eyebrow light"><Sparkles size={14}/> MY CREATIONS</span><h1>我的制作</h1><p>每一份灵感，都值得被好好收藏。</p></div><Link href="/" className="primary-button">探索更多模板 <ArrowRight size={17}/></Link></div>
     {created && <div className="accepted-banner"><span><Check size={18}/></span><div><strong>制作任务已受理</strong><p>你可以继续浏览，作品进度会在这里持续更新。</p></div></div>}
-    <div className="task-toolbar"><div className="task-tabs" role="group" aria-label="任务筛选"><button className={filter === "ALL" ? "selected" : ""} onClick={() => setFilter("ALL")}>全部作品 <span>{tasks.length}</span></button><button className={filter === "ACTIVE" ? "selected" : ""} onClick={() => setFilter("ACTIVE")}>制作中 <span>{activeCount}</span></button><button className={filter === "DONE" ? "selected" : ""} onClick={() => setFilter("DONE")}>已完成 <span>{tasks.length - activeCount}</span></button></div><button className="refresh-button" onClick={() => void refresh()}><RefreshCw size={16}/> 刷新状态</button></div>
+    <div className="task-toolbar"><div className="task-tabs" role="group" aria-label="任务筛选"><button className={filter === "ALL" ? "selected" : ""} onClick={() => changeFilter("ALL")}>全部作品 <span>{counts.all}</span></button><button className={filter === "ACTIVE" ? "selected" : ""} onClick={() => changeFilter("ACTIVE")}>制作中 <span>{activeCount}</span></button><button className={filter === "SUCCEEDED" ? "selected" : ""} onClick={() => changeFilter("SUCCEEDED")}>已完成 <span>{counts.succeeded}</span></button><button className={filter === "FAILED" ? "selected" : ""} onClick={() => changeFilter("FAILED")}>制作失败 <span>{counts.failed}</span></button></div><button className="refresh-button" onClick={() => void refresh()}><RefreshCw size={16}/> 刷新状态</button></div>
     {queryError && <div className="query-error" role="alert"><CircleAlert size={18}/><span>查询暂时不可用：{queryError}。已有记录仍会保留。</span><button onClick={() => void refresh()}>重新查询</button></div>}
-    {loading ? <div className="state-panel">正在加载制作记录…</div> : visible.length === 0 ? <div className="empty-tasks"><span><WandSparkles size={32}/></span><h2>{tasks.length === 0 ? "还没有制作记录" : "这里还没有作品"}</h2><p>{tasks.length === 0 ? "从一个喜欢的模板开始，创造你的第一份作品吧。" : "切换筛选条件，看看其他作品。"}</p><Link href="/" className="primary-button">探索模板 <ArrowRight size={17}/></Link></div> : <div className="task-list">{visible.map(task => <TaskCard task={task} key={task.id}/>)}</div>}
+    {loading ? <div className="state-panel">正在加载制作记录…</div> : visible.length === 0 ? <div className="empty-tasks"><span><WandSparkles size={32}/></span><h2>{counts.all === 0 ? "还没有制作记录" : "这里还没有作品"}</h2><p>{counts.all === 0 ? "从一个喜欢的模板开始，创造你的第一份作品吧。" : "切换筛选条件，看看其他作品。"}</p><Link href="/" className="primary-button">探索模板 <ArrowRight size={17}/></Link></div> : <div className="task-list">{visible.map(task => <TaskCard task={task} key={task.id}/>)}</div>}
   </div>;
 }
 

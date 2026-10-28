@@ -18,14 +18,17 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+/** 管理本地素材与制作结果文件。 */
 @Service
 public class StorageService {
     private final Path root;
 
+    /** 设置并初始化本地文件存储根目录。 */
     public StorageService(@Value("${pixforge.storage-root}") String root) {
         this.root = Path.of(root).toAbsolutePath().normalize();
     }
 
+    /** 将上传图片保存到受控目录。 */
     public String save(String id, MultipartFile file) throws IOException {
         if (file.isEmpty() || file.getSize() > 5L * 1024 * 1024) throw new IllegalArgumentException("图片大小须在 1 字节至 5 MB 之间");
         byte[] bytes = file.getBytes();
@@ -41,6 +44,7 @@ public class StorageService {
         return key;
     }
 
+    /** 复制源图作为普通模板的模拟结果。 */
     public String makeResult(String taskId, AssetRow source) throws IOException {
         String extension = "image/png".equals(source.mimeType) ? ".png" : ".jpg";
         String key = "results/" + taskId + extension;
@@ -50,6 +54,7 @@ public class StorageService {
         return key;
     }
 
+    /** 将一至三张图片排版成旅行明信片拼图。 */
     public String makePostcardResult(String taskId, List<AssetRow> sources) throws IOException {
         if (sources.size() < 1 || sources.size() > 3) throw new IllegalArgumentException("旅行明信片需要 1–3 张图片");
         BufferedImage canvas = new BufferedImage(1200, 1200, BufferedImage.TYPE_INT_RGB);
@@ -81,6 +86,7 @@ public class StorageService {
         return key;
     }
 
+    /** 裁切并绘制一张照片到指定画框。 */
     private void drawPhoto(Graphics2D graphics, AssetRow asset, int x, int y, int width, int height) throws IOException {
         BufferedImage image = ImageIO.read(resolve(asset.storageKey).toFile());
         if (image == null) throw new IOException("素材图片无法读取");
@@ -98,9 +104,12 @@ public class StorageService {
             sourceX, sourceY, sourceX + cropWidth, sourceY + cropHeight, null);
     }
 
+    /** 检查存储键对应的文件是否存在。 */
     public boolean exists(String key) { return Files.isRegularFile(resolve(key)); }
+    /** 将存储键转换为 Spring 可读取资源。 */
     public Resource resource(String key) { return new FileSystemResource(resolve(key)); }
 
+    /** 解析并限制文件路径在存储根目录内。 */
     private Path resolve(String key) {
         Path path = root.resolve(key).normalize();
         if (!path.startsWith(root)) throw new IllegalArgumentException("无效的存储路径");
