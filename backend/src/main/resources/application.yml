@@ -8,6 +8,7 @@ spring:
   sql:
     init:
       mode: always
+      encoding: UTF-8
   servlet:
     multipart:
       max-file-size: 5MB

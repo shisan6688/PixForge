@@ -1,11 +1,16 @@
 package com.pixforge.service;
 
 import com.pixforge.data.AssetRow;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
 import javax.imageio.ImageIO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
@@ -43,6 +48,54 @@ public class StorageService {
         Files.createDirectories(target.getParent());
         Files.copy(resolve(source.storageKey), target, StandardCopyOption.REPLACE_EXISTING);
         return key;
+    }
+
+    public String makePostcardResult(String taskId, List<AssetRow> sources) throws IOException {
+        if (sources.size() < 1 || sources.size() > 3) throw new IllegalArgumentException("旅行明信片需要 1–3 张图片");
+        BufferedImage canvas = new BufferedImage(1200, 1200, BufferedImage.TYPE_INT_RGB);
+        Graphics2D graphics = canvas.createGraphics();
+        try {
+            graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+            graphics.setColor(new Color(248, 242, 231));
+            graphics.fillRect(0, 0, 1200, 1200);
+            int margin = 36, gap = 18, area = 1200 - 2 * margin;
+            if (sources.size() == 1) {
+                drawPhoto(graphics, sources.get(0), margin, margin, area, area);
+            } else if (sources.size() == 2) {
+                int width = (area - gap) / 2;
+                drawPhoto(graphics, sources.get(0), margin, margin, width, area);
+                drawPhoto(graphics, sources.get(1), margin + width + gap, margin, width, area);
+            } else {
+                int leftWidth = (area - gap) / 2;
+                int rightWidth = area - gap - leftWidth;
+                int rowHeight = (area - gap) / 2;
+                drawPhoto(graphics, sources.get(0), margin, margin, leftWidth, area);
+                drawPhoto(graphics, sources.get(1), margin + leftWidth + gap, margin, rightWidth, rowHeight);
+                drawPhoto(graphics, sources.get(2), margin + leftWidth + gap, margin + rowHeight + gap, rightWidth, rowHeight);
+            }
+        } finally { graphics.dispose(); }
+        String key = "results/" + taskId + ".jpg";
+        Path target = resolve(key);
+        Files.createDirectories(target.getParent());
+        if (!ImageIO.write(canvas, "jpg", target.toFile())) throw new IOException("无法写入明信片结果");
+        return key;
+    }
+
+    private void drawPhoto(Graphics2D graphics, AssetRow asset, int x, int y, int width, int height) throws IOException {
+        BufferedImage image = ImageIO.read(resolve(asset.storageKey).toFile());
+        if (image == null) throw new IOException("素材图片无法读取");
+        graphics.setColor(new Color(214, 201, 181));
+        graphics.fillRect(x + 7, y + 9, width, height);
+        graphics.setColor(Color.WHITE);
+        graphics.fillRect(x, y, width, height);
+        int inset = 14, photoWidth = width - 2 * inset, photoHeight = height - 2 * inset;
+        double scale = Math.max(photoWidth / (double) image.getWidth(), photoHeight / (double) image.getHeight());
+        int cropWidth = Math.min(image.getWidth(), (int) Math.round(photoWidth / scale));
+        int cropHeight = Math.min(image.getHeight(), (int) Math.round(photoHeight / scale));
+        int sourceX = (image.getWidth() - cropWidth) / 2;
+        int sourceY = (image.getHeight() - cropHeight) / 2;
+        graphics.drawImage(image, x + inset, y + inset, x + inset + photoWidth, y + inset + photoHeight,
+            sourceX, sourceY, sourceX + cropWidth, sourceY + cropHeight, null);
     }
 
     public boolean exists(String key) { return Files.isRegularFile(resolve(key)); }

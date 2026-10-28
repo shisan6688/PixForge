@@ -44,7 +44,8 @@ public class TaskService {
         TemplateRow template = templates.find(request.templateId());
         if (template == null) throw new ResourceUnavailableException("未找到该模板");
         List<String> ids = request.assetIds();
-        if (ids == null || ids.size() != template.requiredImageCount || new HashSet<>(ids).size() != ids.size())
+        if (ids == null || ids.size() < template.requiredImageCount || ids.size() > template.maxImageCount
+            || new HashSet<>(ids).size() != ids.size())
             throw new IllegalArgumentException("素材数量或上传位不正确");
         for (String id : ids) {
             AssetRow asset = assets.owned(id, userId);

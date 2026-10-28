@@ -1,6 +1,6 @@
 # 示例素材来源
 
-本目录保存已确认的 8 张图片，用于素材制作网站的模板展示和演示。素材文件随源码交付，页面运行时不依赖第三方图片链接。记录日期：2026-10-28。
+本目录保存 11 张模板示例与参考图片，用于素材制作网站的模板展示和演示。素材文件随源码交付，页面运行时不依赖第三方图片链接。记录日期：2026-10-28。
 
 ## Unsplash 原图
 
@@ -15,6 +15,16 @@
 | 暖光胶片相机 | [`templates/mustafi-numann-kz3pzTVrHtU-unsplash.jpg`](./templates/mustafi-numann-kz3pzTVrHtU-unsplash.jpg) | Mustafi Numann | [Vintage camera illuminated by warm light](https://unsplash.com/photos/vintage-camera-illuminated-by-warm-light-kz3pzTVrHtU) |
 
 “暖色轮廓”是对话中选图时使用的名称；实际下载原图也偏青绿色。后续如需暖色封面，应基于原图另做调色版本并保留来源记录。
+
+## 旅行明信片新增素材
+
+以下两张原图由用户加入项目，保留原文件名，作为旅行明信片的备选素材；当前页面使用用户在对话中提供的三图拼贴作为封面和效果预览。
+
+| 名称 | 项目文件 | 来源记录 |
+| --- | --- | --- |
+| 海岸风景 | [`templates/nicole-vallejos-o3TIsOkZwSQ-unsplash.jpg`](./templates/nicole-vallejos-o3TIsOkZwSQ-unsplash.jpg) | 用户提供的 Unsplash 下载文件，作者名见文件名 |
+| 街巷风景 | [`templates/regos-kornyei-uPE-0f4GVfY-unsplash.jpg`](./templates/regos-kornyei-uPE-0f4GVfY-unsplash.jpg) | 用户提供的 Unsplash 下载文件，作者名见文件名 |
+| 三图拼贴效果 | [`templates/travel-postcard-collage.png`](./templates/travel-postcard-collage.png) | 用户于 2026-10-28 在对话中提供的参考图，原样用于模板示例 |
 
 ## Pexels 原图
 

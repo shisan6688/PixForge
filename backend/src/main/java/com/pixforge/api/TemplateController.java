@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/templates")
 public class TemplateController {
     public record Template(String id, String title, String category, String description, String coverUrl,
-                           String resultSampleUrl, int requiredImageCount, List<String> acceptedMimeTypes,
+                           String resultSampleUrl, int requiredImageCount, int maxImageCount, List<String> acceptedMimeTypes,
                            long maxFileSizeBytes, String accent, String badge) {}
     private final TemplateMapper mapper;
 
@@ -19,7 +19,7 @@ public class TemplateController {
 
     public static Template view(TemplateRow row) {
         return new Template(row.id, row.title, row.category, row.description, row.coverPath,
-            row.resultSamplePath, row.requiredImageCount, Arrays.asList(row.acceptedMimeTypes.split(",")),
+            row.resultSamplePath, row.requiredImageCount, row.maxImageCount, Arrays.asList(row.acceptedMimeTypes.split(",")),
             row.maxFileSizeBytes, row.accent, row.badge);
     }
 

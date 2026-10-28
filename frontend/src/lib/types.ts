@@ -10,6 +10,7 @@ export interface Template {
   coverUrl: string;
   resultSampleUrl: string;
   requiredImageCount: number;
+  maxImageCount?: number;
   acceptedMimeTypes: string[];
   maxFileSizeBytes: number;
   accent: string;

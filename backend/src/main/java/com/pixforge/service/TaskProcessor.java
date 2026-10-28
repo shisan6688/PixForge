@@ -58,7 +58,12 @@ public class TaskProcessor {
                         throw new StageFailure("ASSET_MISSING", "素材文件不可用");
                 }
                 String result = null;
-                if ("FINALIZE".equals(stage)) result = storage.makeResult(id, mapper.assets(id).get(0));
+                if ("FINALIZE".equals(stage)) {
+                    List<AssetRow> assets = mapper.assets(id);
+                    result = "travel-postcard".equals(task.templateId)
+                        ? storage.makePostcardResult(id, assets)
+                        : storage.makeResult(id, assets.get(0));
+                }
                 state.finish(id, stage, result);
             }
         } catch (InterruptedException exception) {

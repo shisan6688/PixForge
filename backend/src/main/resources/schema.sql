@@ -8,6 +8,10 @@ CREATE TABLE IF NOT EXISTS template (
   accepted_mime_types VARCHAR(255) NOT NULL, max_file_size_bytes BIGINT NOT NULL,
   accent VARCHAR(32) NOT NULL, badge VARCHAR(32), is_enabled TINYINT NOT NULL DEFAULT 1
 );
+CREATE TABLE IF NOT EXISTS template_image_limit (
+  template_id VARCHAR(64) PRIMARY KEY, max_image_count INT NOT NULL,
+  FOREIGN KEY (template_id) REFERENCES template(id)
+);
 CREATE TABLE IF NOT EXISTS asset (
   id CHAR(36) PRIMARY KEY, user_id BIGINT NOT NULL, original_filename VARCHAR(255) NOT NULL,
   mime_type VARCHAR(32) NOT NULL, size_bytes BIGINT NOT NULL, storage_key VARCHAR(255) NOT NULL,
