@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0",
-    "prebuild": "node -e \"require('fs').mkdirSync('.next/server/app/tasks.segments/tasks', { recursive: true })\"",
+    "prebuild": "node -e \"for (const path of ['.next/server/app/tasks.segments/tasks', '.next/static/chunks/app']) require('fs').mkdirSync(path, { recursive: true })\"",
     "build": "next build --webpack",
     "start": "next start --hostname 0.0.0.0",
     "lint": "eslint .",
