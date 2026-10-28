@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: pixforge-backend
+server:
+  port: ${PORT:8080}
+  servlet:
+    session:
+      cookie:
+        same-site: lax
+management: {}
