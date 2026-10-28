@@ -3,8 +3,10 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-ARG NEXT_PUBLIC_USE_DEMO_API=true
+ARG NEXT_PUBLIC_USE_DEMO_API=false
 ENV NEXT_PUBLIC_USE_DEMO_API=${NEXT_PUBLIC_USE_DEMO_API}
+ARG BACKEND_URL=http://backend:8080
+ENV BACKEND_URL=${BACKEND_URL}
 RUN npm run build
 
 FROM node:22-alpine

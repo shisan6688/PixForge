@@ -2,7 +2,7 @@ import { templates } from "./demo-data";
 import { materializeDemoTask } from "./task-state";
 import { Asset, ProductionTask, Stage, STAGES, Template, User } from "./types";
 
-const demo = process.env.NEXT_PUBLIC_USE_DEMO_API !== "false";
+const demo = process.env.NEXT_PUBLIC_USE_DEMO_API === "true";
 const TASKS_KEY = "pixforge-demo-tasks";
 const USER_KEY = "pixforge-demo-user";
 

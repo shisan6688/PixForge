@@ -1,9 +1,24 @@
 services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: pixforge
+      MYSQL_USER: pixforge
+      MYSQL_PASSWORD: pixforge
+      MYSQL_ROOT_PASSWORD: local-root-password
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
   frontend:
     build:
       context: ./frontend
       args:
-        NEXT_PUBLIC_USE_DEMO_API: "true"
+        NEXT_PUBLIC_USE_DEMO_API: "false"
+        BACKEND_URL: http://backend:8080
     environment:
       BACKEND_URL: http://backend:8080
     ports:
@@ -13,5 +28,19 @@ services:
   backend:
     build:
       context: ./backend
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/pixforge?useUnicode=true&characterEncoding=utf8&connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true
+      DB_USER: pixforge
+      DB_PASSWORD: pixforge
+      STORAGE_ROOT: /data
+      DEMO_CONTROLS_ENABLED: "true"
+    volumes:
+      - uploads_data:/data
+    depends_on:
+      mysql:
+        condition: service_healthy
     ports:
       - "8080:8080"
+volumes:
+  mysql_data:
+  uploads_data:

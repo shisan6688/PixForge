@@ -5,4 +5,5 @@
 /frontend/.env.local
 /frontend/tsconfig.tsbuildinfo
 /backend/target/
+/backend/data/
 /.m2/
