@@ -34,7 +34,11 @@ function TaskPageContent() {
     window.addEventListener("pixforge:user-changed", reset);
     return () => { generation.current += 1; requests.current?.abort(); window.removeEventListener("pixforge:user-changed", reset); };
   }, []);
-  useEffect(() => { void refresh(true); return () => requests.current?.abort(); }, [refresh, revision]);
+  useEffect(() => {
+    let active = true;
+    queueMicrotask(() => { if (active) void refresh(true); });
+    return () => { active = false; requests.current?.abort(); };
+  }, [refresh, revision]);
   const activeCount = tasks.filter(isActive).length;
   useEffect(() => {
     if (activeCount === 0) return;

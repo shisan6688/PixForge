@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0",
-    "build": "next build",
+    "prebuild": "node -e \"require('fs').mkdirSync('.next/server/app/tasks.segments/tasks', { recursive: true })\"",
+    "build": "next build --webpack",
     "start": "next start --hostname 0.0.0.0",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
@@ -12,17 +13,16 @@
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
-    "next": "^15.5.0",
+    "next": "^16.4.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3.3.1",
     "@types/node": "^22.18.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "eslint": "^9.35.0",
-    "eslint-config-next": "^15.5.0",
+    "eslint-config-next": "^16.4.3",
     "typescript": "^5.9.0",
     "vitest": "^3.2.0"
   }
