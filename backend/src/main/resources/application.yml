@@ -1,6 +1,25 @@
 spring:
   application:
     name: pixforge-backend
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/pixforge?useUnicode=true&characterEncoding=utf8&connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true}
+    username: ${DB_USER:pixforge}
+    password: ${DB_PASSWORD:pixforge}
+  sql:
+    init:
+      mode: always
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+pixforge:
+  storage-root: ${STORAGE_ROOT:./data}
+  demo-controls-enabled: ${DEMO_CONTROLS_ENABLED:true}
+  worker-count: ${WORKER_COUNT:2}
+  queue-capacity: ${QUEUE_CAPACITY:16}
 server:
   port: ${PORT:8080}
   servlet:
