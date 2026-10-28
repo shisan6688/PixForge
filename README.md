@@ -66,7 +66,7 @@ docker compose up --build
 
 ## 检查与交付状态
 
-前端检查：`npm run lint`、`npm run typecheck`、`npm run test`（2 项）、`npm run build`。后端检查：`mvn test package`（1 项 MockMvc 冒烟测试）。CI 在 push 和 pull request 执行相同检查。当前环境没有 Docker，无法验证容器构建；浏览器也无法连接沙箱中的本地开发服务器，因此本轮没有完成浏览器目视验收。构建和接口测试已执行。
+前端检查：`npm run lint`、`npm run typecheck`、`npm run test`（2 项）、`npm run build`。后端检查：`mvn test package`（1 项 MockMvc 冒烟测试）。CI 在 push 和 pull request 执行相同检查。本轮已启动前后端，并确认首页 HTTP 200、后端健康检查返回 `UP`；浏览器目视检查了首页、模板详情和任务历史。当前环境没有 Docker，容器构建尚未验证。
 
 已知限制：前端演示数据仅保存在浏览器；演示上传未发送到 Java；后端没有数据库和业务执行器；服务重启恢复策略尚未实现。下一阶段应按技术方案补齐 MySQL 表、文件存储、任务受理、固定线程池、阶段记录、用户隔离和异常处理，再切换前端为真实 API 模式并做端到端验证。
 
