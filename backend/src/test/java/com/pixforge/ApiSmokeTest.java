@@ -17,7 +17,8 @@ class ApiSmokeTest {
 
     @Test void startsAndServesTemplates() throws Exception {
         mvc.perform(get("/api/health")).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("UP"));
-        mvc.perform(get("/api/templates")).andExpect(status().isOk()).andExpect(jsonPath("$.items.length()").value(7));
+        mvc.perform(get("/api/templates")).andExpect(status().isOk()).andExpect(jsonPath("$.items.length()").value(8));
         mvc.perform(get("/api/templates/travel-postcard")).andExpect(status().isOk()).andExpect(jsonPath("$.requiredImageCount").value(2));
+        mvc.perform(get("/api/templates/urban-portrait")).andExpect(status().isOk()).andExpect(jsonPath("$.coverUrl").value("/templates/pexels-bollieball-5189976.jpg"));
     }
 }

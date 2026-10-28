@@ -22,7 +22,8 @@ public class TemplateController {
         template("film-memory", "胶片记忆", "图片特效", "为照片增添细腻颗粒与怀旧色彩，收藏此刻的光与影。", "sam-operchuck-LGeE_cTLoqY-unsplash.jpg", 1, "#d8c2ac", null),
         template("golden-hour", "日落剪影", "AI 写真", "用一张人像照片，模拟黄昏光线下的电影感剪影。", "cemrecan-yurtman-wih0v2QIySo-unsplash.jpg", 1, "#b6d7d1", null),
         template("vintage-camera", "复古时光", "创意设计", "组合两张照片，模拟制作一幅带有复古相机质感的回忆拼贴。", "mustafi-numann-kz3pzTVrHtU-unsplash.jpg", 2, "#e1bc99", null),
-        template("misty-portrait", "晨雾人像", "AI 写真", "让人物融入轻盈的薄雾与柔和光影，模拟制作静谧氛围照片。", "cemrecan-yurtman-vqTAlVvrp2M-unsplash.jpg", 1, "#b4cfd1", null)
+        template("misty-portrait", "晨雾人像", "AI 写真", "让人物融入轻盈的薄雾与柔和光影，模拟制作静谧氛围照片。", "cemrecan-yurtman-vqTAlVvrp2M-unsplash.jpg", 1, "#b4cfd1", null),
+        template("urban-portrait", "都市街拍", "AI 写真", "用一张人像照片，模拟制作暖调城市街头写真，呈现自然的光影与街景氛围。", "pexels-bollieball-5189976.jpg", 1, "#cbb69f", "NEW")
     );
 
     private static Template template(String id, String title, String category, String description, String image, int count, String accent, String badge) {
