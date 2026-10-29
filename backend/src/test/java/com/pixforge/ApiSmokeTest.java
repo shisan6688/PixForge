@@ -80,19 +80,29 @@ class ApiSmokeTest {
         } finally { processor.shutdown(); }
     }
 
-    /** 指定阶段失败后不继续执行后续阶段。 */
+    /** 任一指定阶段失败后都不进入后续阶段，也不产生结果。 */
     @Test void simulatedFailureStopsLaterStages() {
-        AssetRow asset = new AssetRow(); asset.storageKey = "assets/a.jpg";
-        TaskMapper mapper = mapper(task("GENERATE"), asset);
-        RecordingState state = new RecordingState(mapper);
-        FakeStorage storage = new FakeStorage();
-        TaskProcessor processor = new TaskProcessor(mapper, state, storage, 1, 1);
-        try {
-            processor.process("task-1");
-            assertEquals(List.of("start:CHECK_ASSETS", "finish:CHECK_ASSETS:null",
-                "start:GENERATE", "fail:GENERATE:SIMULATED_FAILURE"), state.events);
-            assertFalse(storage.copied);
-        } finally { processor.shutdown(); }
+        for (int failedIndex = 0; failedIndex < TaskProcessor.STAGES.size(); failedIndex++) {
+            String failedStage = TaskProcessor.STAGES.get(failedIndex);
+            AssetRow asset = new AssetRow(); asset.storageKey = "assets/a.jpg";
+            TaskMapper mapper = mapper(task(failedStage), asset);
+            RecordingState state = new RecordingState(mapper);
+            FakeStorage storage = new FakeStorage();
+            TaskProcessor processor = new TaskProcessor(mapper, state, storage, 1, 1);
+            try {
+                processor.process("task-1");
+                List<String> expected = new ArrayList<>();
+                for (int index = 0; index < failedIndex; index++) {
+                    String stage = TaskProcessor.STAGES.get(index);
+                    expected.add("start:" + stage);
+                    expected.add("finish:" + stage + ":null");
+                }
+                expected.add("start:" + failedStage);
+                expected.add("fail:" + failedStage + ":SIMULATED_FAILURE");
+                assertEquals(expected, state.events, failedStage);
+                assertFalse(storage.copied, failedStage);
+            } finally { processor.shutdown(); }
+        }
     }
 
     /** 已结束任务不能再次进入执行状态。 */

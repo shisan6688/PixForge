@@ -14,6 +14,17 @@ describe("task state", () => {
     expect(merged.find(task => task.id === "two")?.status).toBe("FAILED");
     expect(failed.steps.map(step => step.status)).toEqual(["SUCCEEDED", "FAILED", "PENDING"]);
   });
+  it("updates only the matching task when another task changes stage or fails", () => {
+    const first = materializeDemoTask(makeTask("one"), Date.parse("2026-01-01T00:00:01.500Z"));
+    const second = materializeDemoTask(makeTask("two"), Date.parse("2026-01-01T00:00:01.500Z"));
+    const failedUpdate = materializeDemoTask(makeTask("two", "GENERATE"), Date.parse("2026-01-01T00:00:02.500Z"));
+    const merged = mergeTasks([first, second], [failedUpdate]);
+
+    expect(merged.find(task => task.id === "one")).toEqual(first);
+    expect(merged.find(task => task.id === "two")).toEqual(failedUpdate);
+    expect(merged.find(task => task.id === "one")?.status).toBe("RUNNING");
+    expect(merged.find(task => task.id === "two")?.status).toBe("FAILED");
+  });
   it("does not turn a request error into task failure", () => {
     const running = materializeDemoTask(makeTask("one"), Date.parse("2026-01-01T00:00:01.500Z"));
     expect(running.status).toBe("RUNNING");
