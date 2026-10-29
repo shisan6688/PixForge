@@ -17,6 +17,7 @@ function TaskPageContent() {
   const [queryError, setQueryError] = useState("");
   const [filter, setFilter] = useState<TaskFilter>("ALL");
   const [revision, setRevision] = useState(0);
+  const [previewTask, setPreviewTask] = useState<ProductionTask | null>(null);
   const requests = useRef<AbortController | null>(null);
   const generation = useRef(0);
   const refresh = useCallback(async (initial = false) => {
@@ -35,7 +36,7 @@ function TaskPageContent() {
     } finally { if (!controller.signal.aborted && requestGeneration === generation.current) setLoading(false); }
   }, [filter]);
   useEffect(() => {
-    const reset = () => { generation.current += 1; requests.current?.abort(); setTasks([]); setCounts({ all: 0, active: 0, succeeded: 0, failed: 0 }); setLoading(true); setQueryError(""); setRevision(value => value + 1); };
+    const reset = () => { generation.current += 1; requests.current?.abort(); setTasks([]); setCounts({ all: 0, active: 0, succeeded: 0, failed: 0 }); setLoading(true); setQueryError(""); setPreviewTask(null); setRevision(value => value + 1); };
     window.addEventListener("pixforge:user-changed", reset);
     return () => { generation.current += 1; requests.current?.abort(); window.removeEventListener("pixforge:user-changed", reset); };
   }, []);
@@ -56,14 +57,43 @@ function TaskPageContent() {
     {created && <div className="accepted-banner"><span><Check size={18}/></span><div><strong>制作任务已受理</strong><p>你可以继续浏览，作品进度会在这里持续更新。</p></div></div>}
     <div className="task-toolbar"><div className="task-tabs" role="group" aria-label="任务筛选"><button className={filter === "ALL" ? "selected" : ""} onClick={() => changeFilter("ALL")}>全部作品 <span>{counts.all}</span></button><button className={filter === "ACTIVE" ? "selected" : ""} onClick={() => changeFilter("ACTIVE")}>制作中 <span>{activeCount}</span></button><button className={filter === "SUCCEEDED" ? "selected" : ""} onClick={() => changeFilter("SUCCEEDED")}>已完成 <span>{counts.succeeded}</span></button><button className={filter === "FAILED" ? "selected" : ""} onClick={() => changeFilter("FAILED")}>制作失败 <span>{counts.failed}</span></button></div><button className="refresh-button" onClick={() => void refresh()}><RefreshCw size={16}/> 刷新状态</button></div>
     {queryError && <div className="query-error" role="alert"><CircleAlert size={18}/><span>查询暂时不可用：{queryError}。已有记录仍会保留。</span><button onClick={() => void refresh()}>重新查询</button></div>}
-    {loading ? <div className="state-panel">正在加载制作记录…</div> : visible.length === 0 ? <div className="empty-tasks"><span><WandSparkles size={32}/></span><h2>{counts.all === 0 ? "还没有制作记录" : "这里还没有作品"}</h2><p>{counts.all === 0 ? "从一个喜欢的模板开始，创造你的第一份作品吧。" : "切换筛选条件，看看其他作品。"}</p><Link href="/" className="primary-button">探索模板 <ArrowRight size={17}/></Link></div> : <div className="task-list">{visible.map(task => <TaskCard task={task} key={task.id}/>)}</div>}
+    {loading ? <div className="state-panel">正在加载制作记录…</div> : visible.length === 0 ? <div className="empty-tasks"><span><WandSparkles size={32}/></span><h2>{counts.all === 0 ? "还没有制作记录" : "这里还没有作品"}</h2><p>{counts.all === 0 ? "从一个喜欢的模板开始，创造你的第一份作品吧。" : "切换筛选条件，看看其他作品。"}</p><Link href="/" className="primary-button">探索模板 <ArrowRight size={17}/></Link></div> : <div className="task-list">{visible.map(task => <TaskCard task={task} key={task.id} onPreview={setPreviewTask}/>)}</div>}
+    {previewTask && <ResultPreview task={previewTask} onClose={() => setPreviewTask(null)}/>}
   </div>;
 }
 
-function TaskCard({ task }: { task: ProductionTask }) {
+function TaskCard({ task, onPreview }: { task: ProductionTask; onPreview: (task: ProductionTask) => void }) {
   const statusText = { QUEUED: "等待处理", RUNNING: "制作中", SUCCEEDED: "制作完成", FAILED: "制作失败" }[task.status];
   const formatted = new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(task.createdAt));
-  return <article className="task-card"><div className="task-cover"><img src={task.templateCoverUrl} alt=""/></div><div className="task-body"><div className="task-top"><div><div className="task-date"><Clock3 size={14}/> {formatted}</div><h2>{task.templateTitle}</h2></div><span className={`status-pill status-${task.status.toLowerCase()}`}>{task.status === "RUNNING" ? <LoaderCircle size={14} className="spin"/> : task.status === "SUCCEEDED" ? <Check size={14}/> : task.status === "FAILED" ? <X size={14}/> : <Clock3 size={14}/>} {statusText}</span></div><div className="stage-list">{STAGES.map((stage, index) => { const step = task.steps.find(item => item.stage === stage); const state = step?.status ?? "PENDING"; return <div className={`stage stage-${state.toLowerCase()}`} key={stage}><span className="stage-dot">{state === "SUCCEEDED" ? <Check size={12}/> : state === "FAILED" ? <X size={12}/> : index + 1}</span><span>{STAGE_LABELS[stage]}</span>{index < STAGES.length - 1 && <span className="stage-line"/>}</div>; })}</div>{task.failureMessage && <p className="task-failure"><CircleAlert size={15}/>{task.failureMessage}</p>}{task.status === "SUCCEEDED" && task.resultUrl && <a className="result-link" href={task.resultUrl} target="_blank" rel="noreferrer">查看作品 <ArrowRight size={16}/></a>}{isActive(task) && <p className="task-progress-note">{task.status === "QUEUED" ? "任务已进入队列，等待开始…" : `正在${STAGE_LABELS[task.currentStage ?? "CHECK_ASSETS"]}，请稍候…`}</p>}</div></article>;
+  return <article className="task-card"><div className="task-cover"><img src={task.templateCoverUrl} alt=""/></div><div className="task-body"><div className="task-top"><div><div className="task-date"><Clock3 size={14}/> {formatted}</div><h2>{task.templateTitle}</h2></div><span className={`status-pill status-${task.status.toLowerCase()}`}>{task.status === "RUNNING" ? <LoaderCircle size={14} className="spin"/> : task.status === "SUCCEEDED" ? <Check size={14}/> : task.status === "FAILED" ? <X size={14}/> : <Clock3 size={14}/>} {statusText}</span></div><div className="stage-list">{STAGES.map((stage, index) => { const step = task.steps.find(item => item.stage === stage); const state = step?.status ?? "PENDING"; return <div className={`stage stage-${state.toLowerCase()}`} key={stage}><span className="stage-dot">{state === "SUCCEEDED" ? <Check size={12}/> : state === "FAILED" ? <X size={12}/> : index + 1}</span><span>{STAGE_LABELS[stage]}</span>{index < STAGES.length - 1 && <span className="stage-line"/>}</div>; })}</div>{task.failureMessage && <p className="task-failure"><CircleAlert size={15}/>{task.failureMessage}</p>}{task.status === "SUCCEEDED" && task.resultUrl && <button type="button" className="result-link" onClick={() => onPreview(task)}>查看作品 <ArrowRight size={16}/></button>}{isActive(task) && <p className="task-progress-note">{task.status === "QUEUED" ? "任务已进入队列，等待开始…" : `正在${STAGE_LABELS[task.currentStage ?? "CHECK_ASSETS"]}，请稍候…`}</p>}</div></article>;
+}
+
+function ResultPreview({ task, onClose }: { task: ProductionTask; onClose: () => void }) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [imageError, setImageError] = useState(false);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (dialog && !dialog.open) dialog.showModal();
+  }, []);
+
+  return <dialog
+    ref={dialogRef}
+    className="result-preview-dialog"
+    aria-labelledby="result-preview-title"
+    onClose={onClose}
+    onClick={event => { if (event.target === dialogRef.current) dialogRef.current.close(); }}
+  >
+    <div className="result-preview-content">
+      <div className="result-preview-header">
+        <h2 id="result-preview-title">{task.templateTitle} · 作品预览</h2>
+        <button type="button" className="result-preview-close" aria-label="关闭作品预览" onClick={() => dialogRef.current?.close()}><X size={20}/></button>
+      </div>
+      <div className="result-preview-image">
+        {imageError ? <p role="alert">图片暂时无法加载，请关闭后重试。</p> : <img src={task.resultUrl ?? ""} alt={`${task.templateTitle}制作结果`} onError={() => setImageError(true)}/>}
+      </div>
+    </div>
+  </dialog>;
 }
 
 export default function TasksPage() { return <Suspense fallback={<div className="page-container"><div className="state-panel">正在加载制作记录…</div></div>}><TaskPageContent/></Suspense>; }
