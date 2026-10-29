@@ -121,7 +121,7 @@ Java 的 HTTP 会话决定当前演示用户，浏览器通过会话 Cookie 延�
 
 在 `frontend/` 运行 `npm run lint`、`npm run typecheck`、`npm run test`、`npm run build`；在 `backend/` 运行 `mvn test package`。[CI](.github/workflows/ci.yml) 在 push 和 pull request 时执行这些检查。Windows 本机 Maven 若遇跨盘符 Surefire 启动问题，可加 `-DforkCount=0`。后端单元测试覆盖阶段顺序、三个指定失败阶段的中断、终态保护和用户任务隔离；前端测试覆盖任务互不串扰、查询异常和任务失败的区分，以及上传数量校验。
 
-此前在本机完成过 Java 单元测试与打包、前端 lint、类型检查、测试和构建。临时 MySQL 8.0 实例上的 HTTP 验证覆盖建表及 8 个种子模板、上传、成功与指定阶段失败、结果读取、用户隔离和重启中断；生产构建的 Next.js 同源代理也通过上传及任务提交验证。数据库和 HTTP 全流程尚无自动集成测试；当前执行环境没有 Docker，因此 Compose 镜像构建与容器启动尚未实际验证。
+此前在本机完成过 Java 单元测试与打包、前端 lint、类型检查、测试和构建。临时 MySQL 8.0 实例上的 HTTP 验证覆盖建表及 8 个种子模板、上传、成功与指定阶段失败、结果读取、用户隔离和重启中断；生产构建的 Next.js 同源代理也通过上传及任务提交验证。数据库和 HTTP 全流程尚无自动集成测试；`docker compose config --quiet` 已通过，但本机 Docker 引擎未就绪，因此 Compose 镜像构建与容器启动尚未实际验证。
 
 未完成与已知限制：旅行明信片仅按固定布局拼接图片，其他模板的成功结果复制第一张素材；运行时不调用 AI。演示用户会话与执行器均为单实例设计，不适合横向扩容，也没有正式身份系统。重启后上次遗留的 `QUEUED` / `RUNNING` 任务会被标记为 `SERVICE_INTERRUPTED`，不会自动恢复执行；已受理任务在队列满时标记为 `EXECUTOR_OVERLOADED`。数据库表结构通过启动 SQL 初始化，尚无版本化迁移，已有表不会自动升级。上传文件与数据库记录的写入并非一个原子事务，存储故障可能留下孤立文件。生产部署需另配独立凭据和持久化存储。
 
