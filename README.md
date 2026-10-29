@@ -1,5 +1,7 @@
 # PixForge
 
+![PixForge 主界面](./附件/UI-04：PixForge主界面.png)
+
 基于 Next.js、Spring Boot、MyBatis 和 MySQL 的图片素材创作工作台。用户可浏览模板、上传图片并提交异步制作任务；任务在 Java 后台处理，历史记录、阶段状态和图片由服务端保存。生成器只做可控制耗时的模拟：旅行明信片把 1–3 张上传图片拼成结果图，其他模板复制第一张图片，不调用 AI。
 
 ## 完成范围
@@ -23,17 +25,31 @@
 
 前端依赖及锁定版本见 [`frontend/package.json`](frontend/package.json) 和 [`frontend/package-lock.json`](frontend/package-lock.json)；后端依赖见 [`backend/pom.xml`](backend/pom.xml)。页面采用 Next.js App Router；业务 API、异步执行和 MySQL 持久化位于 Java 后端，Next.js 仅通过同源代理转发 `/api/*` 请求。前端用 React 状态管理上传和任务列表，用轮询更新进行中的任务；后台用有界线程池执行。
 
-## 启动
+## 克隆与启动（Docker Compose）
 
-推荐在仓库根目录运行：
+先安装 Git 和 Docker Compose，并确认 Docker 引擎已启动、宿主机的 3000 和 8080 端口可用。Windows 使用 Docker Desktop 的 Linux 容器模式；Linux 使用 Docker Engine 与 Compose 插件。以下命令会从 GitHub 克隆源码，在项目目录构建并启动 MySQL、Java 后端和 Next.js 前端。
 
-```bash
-docker compose up --build
+### Windows（PowerShell）
+
+```powershell
+git clone https://github.com/shisan6688/PixForge.git
+Set-Location PixForge
+docker compose up --build -d
 ```
 
-Compose 启动 MySQL、Java 和 Next.js，首次启动时后端自动建表和写入演示用户 A/B 及 8 个模板；后续启动会按 UTF-8 更新这些种子数据的展示文案。访问 `http://localhost:3000`；后端健康检查为 `http://localhost:8080/api/health`。MySQL 数据和上传文件分别保存在 `mysql_data`、`uploads_data` 卷。Compose 中的数据库密码只用于本地演示，不应用于公网部署。
+### Linux（Bash）
 
-本机分别运行需要 Node.js 22、npm、JDK 17、Maven 3.9 和 MySQL 8.0。先创建数据库及用户，例如：
+```bash
+git clone https://github.com/shisan6688/PixForge.git
+cd PixForge
+docker compose up --build -d
+```
+
+两种系统均可用 `docker compose ps` 检查服务状态。前端访问 `http://localhost:3000`，后端健康检查为 `http://localhost:8080/api/health`。首次启动时后端自动建表并写入演示用户 A/B 和 8 个模板；后续启动会按 UTF-8 更新种子数据的展示文案。MySQL 数据和上传文件分别保存在 `mysql_data`、`uploads_data` 卷。停止服务用 `docker compose down`，该命令不会删除卷；需要保留历史时不要加 `-v`。Compose 中的数据库密码只用于本地演示，不应用于公网部署。
+
+### 不使用 Docker 的本机运行
+
+Windows 和 Linux 都需要 Node.js 22、npm、JDK 17、Maven 3.9 和 MySQL 8.0。先在 MySQL 中创建数据库及用户，例如：
 
 ```sql
 CREATE DATABASE pixforge CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -41,11 +57,15 @@ CREATE USER 'pixforge'@'localhost' IDENTIFIED BY 'pixforge';
 GRANT ALL PRIVILEGES ON pixforge.* TO 'pixforge'@'localhost';
 ```
 
+从仓库根目录打开第一个终端启动后端：
+
 ```bash
 cd backend
 mvn test package
 java -jar target/pixforge-service.jar
 ```
+
+从仓库根目录打开第二个终端启动前端：
 
 ```bash
 cd frontend
@@ -53,7 +73,7 @@ npm ci
 npm run dev
 ```
 
-生产模式的前端构建与启动命令为 `cd frontend && npm ci && npm run build && npm run start`；后端构建和启动命令见上方。完整检查命令见“验证与限制”。
+生产模式的前端构建与启动命令为 `cd frontend && npm ci && npm run build && npm run start`；后端构建和启动命令见上方。完整检查命令见“验证与限制”。本机执行时，Windows 在 PowerShell 用 `$env:变量名="值"` 设置后端环境变量，Linux 在 Bash 用 `export 变量名="值"`；环境变量需在启动对应服务的终端中生效。
 
 前端通过 Next.js 同源代理访问 Java；本机代理默认指向 `http://localhost:8080`。在其他地址运行后端时设置 `BACKEND_URL`。生产构建须在**构建时**提供此变量（Compose 已通过前端构建参数传入）；开发服务器启动前设置即可。前端默认调用真实接口；`NEXT_PUBLIC_USE_DEMO_API` 也是构建期变量，改变后须重新构建。`frontend/.env.example` 将演示适配器设为 `true`，复制使用后会切换为仅存于浏览器的模式；要验证 Java/MySQL 业务链路，应设为 `false`。
 
@@ -78,6 +98,8 @@ NEXT_PUBLIC_USE_DEMO_API=false
 后端默认数据库地址为 `localhost:3306/pixforge`，上传目录为 `./data`，工作线程 2 个、等待队列 16 个。Spring Boot 启动时按 UTF-8 执行 [`schema.sql`](backend/src/main/resources/schema.sql) 和 [`data.sql`](backend/src/main/resources/data.sql)：前者建表，后者写入演示用户 A/B 与 8 个模板；已有种子记录的展示文案会更新。模板封面和效果预览是仓库自带的 [`frontend/public/templates/`](frontend/public/templates/) 静态文件，由前端服务提供；其原始素材与来源记录在 [`assets/templates/`](assets/templates/) 和 [素材来源](assets/SOURCES.md)。无需另行下载图片。用户上传的素材及制作结果由后端写入 `STORAGE_ROOT`，Compose 使用 `uploads_data` 卷保存。
 
 ## 演示
+
+其他界面截图：[模板列表与分类](./附件/UI-01：模板列表与分类.png) · [模板详情与上传位](./附件/UI-02：普通模板详情与上传位.png) · [制作中与历史结果](./附件/UI-03：制作中与历史结果.png)。
 
 1. 在首页筛选模板，进入详情并上传要求数量的 JPEG/PNG 图片（每张不超过 5 MB）。
 2. 展开“演示设置”，将每阶段耗时设为 1、2、4 或 8 秒。选择“不模拟失败”演示成功；选择素材检查、模拟生成或结果整理可重复触发相应阶段失败。提交后立即进入“我的制作”。
@@ -121,13 +143,13 @@ Java 的 HTTP 会话决定当前演示用户，浏览器通过会话 Cookie 延�
 
 在 `frontend/` 运行 `npm run lint`、`npm run typecheck`、`npm run test`、`npm run build`；在 `backend/` 运行 `mvn test package`。[CI](.github/workflows/ci.yml) 在 push 和 pull request 时执行这些检查。Windows 本机 Maven 若遇跨盘符 Surefire 启动问题，可加 `-DforkCount=0`。后端单元测试覆盖阶段顺序、三个指定失败阶段的中断、终态保护和用户任务隔离；前端测试覆盖任务互不串扰、查询异常和任务失败的区分，以及上传数量校验。
 
-此前在本机完成过 Java 单元测试与打包、前端 lint、类型检查、测试和构建。临时 MySQL 8.0 实例上的 HTTP 验证覆盖建表及 8 个种子模板、上传、成功与指定阶段失败、结果读取、用户隔离和重启中断；生产构建的 Next.js 同源代理也通过上传及任务提交验证。数据库和 HTTP 全流程尚无自动集成测试；`docker compose config --quiet` 已通过，但本机 Docker 引擎未就绪，因此 Compose 镜像构建与容器启动尚未实际验证。
+此前在本机完成过 Java 单元测试与打包、前端 lint、类型检查、测试和构建。临时 MySQL 8.0 实例上的 HTTP 验证覆盖建表及 8 个种子模板、上传、成功与指定阶段失败、结果读取、用户隔离和重启中断；生产构建的 Next.js 同源代理也通过上传及任务提交验证。数据库和 HTTP 全流程尚无自动集成测试；Docker Compose 镜像构建与容器启动已完成手工验证。
 
 未完成与已知限制：旅行明信片仅按固定布局拼接图片，其他模板的成功结果复制第一张素材；运行时不调用 AI。演示用户会话与执行器均为单实例设计，不适合横向扩容，也没有正式身份系统。重启后上次遗留的 `QUEUED` / `RUNNING` 任务会被标记为 `SERVICE_INTERRUPTED`，不会自动恢复执行；已受理任务在队列满时标记为 `EXECUTOR_OVERLOADED`。数据库表结构通过启动 SQL 初始化，尚无版本化迁移，已有表不会自动升级。上传文件与数据库记录的写入并非一个原子事务，存储故障可能留下孤立文件。生产部署需另配独立凭据和持久化存储。
 
 ## 部署与回滚
 
-部署前记录当前 Git commit 或镜像版本，备份 MySQL 数据和 `uploads_data` 上传卷。确认环境变量、数据库连接和卷挂载后，在仓库根目录运行 `docker compose up --build -d`，再检查 `/api/health`、模板列表和一次成功任务。回滚时切回先前的源码 commit 或镜像版本并重新启动；若新版本改动了数据结构或数据内容，同时恢复对应的数据库与上传卷备份。当前没有版本化数据库迁移，升级前需先核对表结构兼容性。保留历史时不要运行 `docker compose down -v`。
+部署前记录当前 Git commit 或镜像版本，备份 MySQL 数据和 `uploads_data` 上传卷。确认环境变量、数据库连接和卷挂载后，按上面的 Windows 或 Linux 步骤在仓库根目录运行 `docker compose up --build -d`，再检查 `/api/health`、模板列表和一次成功任务。回滚时切回先前的源码 commit 或镜像版本并重新启动；若新版本改动了数据结构或数据内容，同时恢复对应的数据库与上传卷备份。当前没有版本化数据库迁移，升级前需先核对表结构兼容性。保留历史时不要运行 `docker compose down -v`。
 
 ## 投入、AI 使用与复用来源
 
